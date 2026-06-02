@@ -1,3 +1,11 @@
+# this script enables you to search for ORCID iDs affiliated with your 
+# institution and extract a subset of individuals who are currently 
+# employed at your institution
+
+# NOTE: the rorcid package is deprecated, so this script will likely
+# eventually fail to work properly
+# code works as of the latest update of this script
+
 # load the packages
 library(dplyr)
 library(tibble)
@@ -147,8 +155,10 @@ employment_data_filtered <- employment_data %>%
 
 
 # finally, filter to include only people who have NA as the end date
+# if your subset has no end dates, that column will not exist
+# so this code accounts for that possibility
 employment_data_filtered_current <- employment_data_filtered %>%
-  dplyr::filter(is.na(end_date_year_value))
+  dplyr::filter(if_any(any_of("end_date_year_value"), ~ is.na(.)))
 
 # note that this will give you employment records ONLY. 
 # In other words, each row represents a single employment record for an individual.
@@ -266,7 +276,7 @@ print(dept_plot)
 
 # make a list of titles for graduate students
 grad_student_titles <- c("Graduate Research Assistant",
-                         "GRA",
+                         "GRA","Graduate Student ",
                          "Graduate Assistant",
                          "Graduate Teaching Assistant",
                          "Graduate Research Associate",
