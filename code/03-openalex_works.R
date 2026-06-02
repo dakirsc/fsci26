@@ -53,12 +53,12 @@ openalex_api_url <- paste0("https://api.openalex.org/works?filter=authorships.au
 # this will take a moment
 
 # create empty data frame
-oa_works <- data.frame()
+oax_works <- data.frame()
 
 # "safely" remakes the function so that as it runs,
 # any errors it encounters don't cause the loop to fail
 # it simply moves on to the next item and reports its errors in the end
-safe_oa_request <- safely(oa_request)
+safe_oax_request <- safely(oa_request)
 
 ###################################################
 ## When you run this on your own after the class,##
@@ -68,29 +68,29 @@ safe_oa_request <- safely(oa_request)
 for(orcid in 1:20){
   print(paste0("Loop ",orcid)) # keep track of which loop we are in
   
-  oa_pull = safe_oa_request(query_url = openalex_api_url[orcid]) # create the API request
-  oa_works_df = oa2df(oa_pull$result, # only need the "result" column from `safely` output
+  oax_pull = safe_oax_request(query_url = openalex_api_url[orcid]) # create the API request
+  oax_works_df = oa2df(oax_pull$result, # only need the "result" column from `safely` output
                      entity = "works") # query the "works" endpoint and obtain and dataframe
   
-  if(is_empty(lengths(oa_works_df))) { # if no data, then skip that ORCID iD
+  if(is_empty(lengths(oax_works_df))) { # if no data, then skip that ORCID iD
     next
   }
   
-  oa_works_df_index = oa_works_df %>% 
+  oax_works_df_index = oax_works_df %>% 
     mutate(orcid_index = orcid, # makes ORCID iD traceable
-           work_index = rep(1:nrow(oa_works_df))) %>% # identifies individual works per ORCID
+           work_index = rep(1:nrow(oax_works_df))) %>% # identifies individual works per ORCID
     rename(work_id = id, # rename to avoid confusion/errors
            work_type = type, # rename to avoid confusion/errors
            work_display_name = display_name) %>% # rename to avoid confusion/errors
     relocate(orcid_index,.before = work_id)%>% 
     relocate(work_index,.after = orcid_index)
   
-  if(is_empty(oa_works)){ # for first entry - avoid NA row in dataframe
-    oa_works <- oa_works_df_index # replaces empty contents of oa_works
+  if(is_empty(oax_works)){ # for first entry - avoid NA row in dataframe
+    oax_works <- oax_works_df_index # replaces empty contents of oa_works
   }
-  if(!is_empty(oa_works)){
-    oa_works <- oa_works %>% 
-      full_join(.,oa_works_df_index)
+  if(!is_empty(oax_works)){
+    oax_works <- oax_works %>% 
+      full_join(.,oax_works_df_index)
   }
 }
 
@@ -98,7 +98,7 @@ for(orcid in 1:20){
 # will also get warnings if works have truncated lists of authors
 
 # reorder columns
-oa_works <- oa_works %>% 
+oax_works <- oax_works %>% 
   select(doi, orcid_index, work_index,title, work_type, 
          publication_year, source_display_name,everything())
 
@@ -111,11 +111,11 @@ orcid_df <- as.data.frame(cbind(orcid_list,index)) %>%
   rename(orcid_index = "index",
          orcid_search = "orcid_list")
 # add the ORCID iDs to oa_works
-oa_works_orcid <- oa_works %>% 
+oax_works_orcid <- oax_works %>% 
   left_join(.,orcid_df, by = "orcid_index") %>%
   relocate(orcid_search, .after = doi)
 
-View(oa_works_orcid)
+View(oax_works_orcid)
 # nested columns include:
 # authorships
 # counts_by_year
@@ -123,13 +123,13 @@ View(oa_works_orcid)
 # plus some lists (related_works, ids)
 
 # save this file
-write_csv(oa_works_orcid,"data/results/openalex_orcid_works.csv")
+write_csv(oax_works_orcid,"data/results/openalex_orcid_works.csv")
 
 
 ### extract author info -----------------------------------------
 
 # create empty dataframe
-oa_authors <- data.frame()
+oax_authors <- data.frame()
 
 ###################################################
 ## When you run this on your own after the class,##
@@ -139,10 +139,10 @@ oa_authors <- data.frame()
 for(orcid in 1:20){
   print(paste0("Loop ",orcid)) # keep track of which loop we are in
   
-  if(!any(oa_works_orcid$orcid_index == orcid)) { # skips ORCID iDs not in dataset
+  if(!any(oax_works_orcid$orcid_index == orcid)) { # skips ORCID iDs not in dataset
     next
   }
-  author_info = oa_works_orcid %>% 
+  author_info = oax_works_orcid %>% 
     filter(orcid_index == orcid) 
   
   for(work in 1:nrow(author_info)){
@@ -161,11 +161,11 @@ for(orcid in 1:20){
     
     for(author in 1:nrow(author_df)){
       if(author_df$has_affiliation[author] == FALSE){ # test whether affiliation info is available
-        if(is_empty(oa_authors)){
-          oa_authors <- author_df # replaces empty contents of author_info_df
+        if(is_empty(oax_authors)){
+          oax_authors <- author_df # replaces empty contents of author_info_df
         }
-        if(!is_empty(oa_authors)){
-          oa_authors <- oa_authors %>% 
+        if(!is_empty(oax_authors)){
+          oax_authors <- oax_authors %>% 
             full_join(.,author_df)
         }
         next
@@ -177,11 +177,11 @@ for(orcid in 1:20){
                affil_display_name = display_name,
                affil_type = type) # rename to avoid confusion/errors
       
-      if(is_empty(oa_authors)){
-        oa_authors <- author_affil # replaces empty contents of author_info_df
+      if(is_empty(oax_authors)){
+        oax_authors <- author_affil # replaces empty contents of author_info_df
       }
-      if(!is_empty(oa_authors)){
-        oa_authors <- oa_authors %>% 
+      if(!is_empty(oax_authors)){
+        oax_authors <- oax_authors %>% 
           full_join(.,author_affil)
       }
     }
@@ -189,19 +189,19 @@ for(orcid in 1:20){
 }
 
 # relocate order of columns
-oa_authors <- oa_authors %>% 
+oax_authors <- oax_authors %>% 
   select(doi, orcid_search, orcid_index, work_index, author_index,
          title, work_type, publication_year, source_display_name,
          author_display_name, orcid, is_corresponding,
          affil_display_name, ror, affil_type,everything())
 
-View(oa_authors)
+View(oax_authors)
 
-write_csv(oa_authors,"data/results/openalex_author_works.csv")
+write_csv(oax_authors,"data/results/openalex_author_works.csv")
 
 
 # get a full list of authors without all the extra info
-author_collated <- oa_authors %>% 
+author_collated <- oax_authors %>% 
   select(orcid_index,work_index,author_display_name) %>% 
   group_by(orcid_index,work_index) %>% 
   mutate(author_list = paste(author_display_name, collapse = "|")) %>% 
@@ -209,7 +209,7 @@ author_collated <- oa_authors %>%
   distinct()
 
 # combine the author list with the original oa_works dataset we collected
-oa_works_author_collated <- oa_works_orcid %>% 
+oax_works_author_collated <- oax_works_orcid %>% 
   full_join(.,author_collated, by = c("orcid_index","work_index")) %>% 
   relocate(author_list, .after = work_display_name) %>% 
   select(doi, orcid_search, orcid_index, work_index,title, work_type, 
@@ -217,7 +217,7 @@ oa_works_author_collated <- oa_works_orcid %>%
          everything())
 
 # save this file too
-write_csv(oa_works_author_collated,"data/results/openalex_works_author_collated.csv")
+write_csv(oax_works_author_collated,"data/results/openalex_works_author_collated.csv")
 
 # now let's combine this with the orcid_employment_file.csv
 # so we have a more complete dataset
@@ -225,35 +225,35 @@ write_csv(oa_works_author_collated,"data/results/openalex_works_author_collated.
 # looking at the data -----------------------------------------------------
 
 # number of unique ORCID iDs found in OpenAlex
-length(unique(oa_works_orcid$orcid_index)) 
+length(unique(oax_works_orcid$orcid_index)) 
 
 # max number of works from single author 
-max(oa_works_orcid$work_index) 
+max(oax_works_orcid$work_index) 
 
 # histogram of number of works from each author
 # you can adjust the number of bins (breaks) if you want
-hist(oa_works_orcid$orcid_index)
+hist(oax_works_orcid$orcid_index)
 
 # count up the number of each work type
 # and order them from most to least prevalent
-oa_works_orcid %>% 
+oax_works_orcid %>% 
   group_by(work_type) %>% 
   count() %>% 
   arrange(desc(n))
 
 # histogram of reported citation counts
-hist(oa_works_orcid$cited_by_count,
+hist(oax_works_orcid$cited_by_count,
      breaks = 20)
 
 # sort by top cited
-top_cited <- oa_works_orcid %>%
+top_cited <- oax_works_orcid %>%
   relocate(cited_by_count, .after = doi) %>% 
   arrange(desc(cited_by_count))
 
 # source (journal) name
 # create a table looking at the number of articles per journal
 # then sort so that more highly used journals are at the top 
-top_journals <- oa_works_orcid %>%
+top_journals <- oax_works_orcid %>%
   filter(!is.na(source_display_name)) %>%
   group_by(source_display_name) %>%
   tally() %>%
@@ -262,7 +262,7 @@ top_journals <- oa_works_orcid %>%
 # host organization (publisher)
 # count up the number of works published by a particular publisher
 # then sort so more highly used publishers are at the top
-top_publisher <- oa_works_orcid %>% 
+top_publisher <- oax_works_orcid %>% 
   filter(!is.na(host_organization_name)) %>% 
   group_by(host_organization_name) %>% 
   tally() %>% 
@@ -270,7 +270,7 @@ top_publisher <- oa_works_orcid %>%
 
 
 # line plot of publication_date (publication_year may be pretty similar)
-pub_date_plot <- oa_works_orcid %>%
+pub_date_plot <- oax_works_orcid %>%
   count(publication_date) %>%
   ggplot(aes(x = publication_date, 
              y = n)) + 
@@ -282,7 +282,7 @@ pub_date_plot <- oa_works_orcid %>%
 print(pub_date_plot)
 
 # publication_year instead
-pub_year_plot <- oa_works_orcid %>%
+pub_year_plot <- oax_works_orcid %>%
   ggplot(aes(x = publication_year)) + 
   geom_histogram(binwidth = 1,
                  color = "black",
@@ -296,7 +296,7 @@ print(pub_year_plot)
 # first get a list of potential name matches
 # replace INSTITUTION BASE NAME with your institution's name
 # for example: Oklahoma State University
-my_institution_list <- oa_authors %>% 
+my_institution_list <- oax_authors %>% 
   select(affil_display_name) %>% 
   filter(str_detect(affil_display_name,
                     "INSTITUTION BASE NAME")) %>% 
@@ -306,7 +306,7 @@ my_institution_list <- oa_authors %>%
 # if your institution has name variations with more dissimilarity, try this:
 # get a list of all institutions matching a more general name
 # for example: Oklahoma
-name_list <- oa_authors %>% 
+name_list <- oax_authors %>% 
   select(affil_display_name) %>% 
   filter(str_detect(affil_display_name,
                     "GENERAL NAME")) %>% 
@@ -324,7 +324,7 @@ my_institution_list_special <- name_list %>%
 
 # NOTE - you will need to replace my_institution_list with my_institution_list_special
 # if you used that approach
-my_author_affil <- oa_authors %>% 
+my_author_affil <- oax_authors %>% 
   filter(affil_display_name %in% my_institution_list) %>% 
   select(author_display_name,author_id,orcid,affil_display_name) %>% 
   distinct() %>% 
@@ -338,7 +338,7 @@ my_author_affil <- oa_authors %>%
 # but sometimes match OpenAlex DOI metadata (api.openalex.org/works?filter=doi:)
 
 # let's look at overall affiliation names and their prevalence
-top_affiliations <- oa_authors %>% 
+top_affiliations <- oax_authors %>% 
   filter(!is.na(affil_display_name)) %>% 
   group_by(affil_display_name) %>% 
   tally() %>% 
@@ -347,7 +347,7 @@ top_affiliations <- oa_authors %>%
 # and let's look at top authors
 # NOTE - this does not include any name standardization
 # so authors with name inconsistencies will be counted separately
-top_authors <- oa_authors %>% 
+top_authors <- oax_authors %>% 
   group_by(author_display_name) %>% 
   tally() %>% 
   arrange(desc(n))
