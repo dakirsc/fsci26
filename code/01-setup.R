@@ -125,14 +125,14 @@ usethis::edit_r_environ()
 #You can confirm this by calling orcid_auth(), and it will print the token
 rorcid::orcid_auth()
 
-# configure sherpa-romeo --------------------------------------------------
+# configure Open Policy Finder --------------------------------------------------
 
-# 1. Create an account with Sherpa-Romeo at https://v2.sherpa.ac.uk/cgi/register
+# 1. Create an account with Open Policy Finder at [insert URL when available]
 # 2. Click the Admin button. Your API key will be displayed. We will use this in 06
 # 3. For now, paste it here: 
 
 # to avoid sharing private information in shared code:
-# rstudioapi::askForPassword('Sherpa-Romeo API Key:')
+# rstudioapi::askForPassword('Open Policy Finder API Key:')
 
 
 # find your institution's identifiers -------------------------------------
