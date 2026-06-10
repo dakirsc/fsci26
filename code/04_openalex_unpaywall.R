@@ -30,7 +30,7 @@ rm(list = ls())
 
 # read in the openalex/orcid merge data
 # and trim DOI so that it only contains the DOI, not https://doi.org/
-oa_works_orcid <- read_csv("data/results/openalex_orcid_works.csv") %>% 
+oax_works_orcid <- read_csv("data/results/openalex_orcid_works.csv") %>% 
   mutate(doi = str_replace(doi,
                            "https://doi.org/",
                            ""))
@@ -53,7 +53,7 @@ slow_oadoi_fetch <- safely(slowly(oadoi_fetch, rate_delay(2)))
 ###################################################
 
 # loop through the dois, calling oadoi_fetch and returning the results
-dois_unpay <- map(oa_works_orcid$doi[1:20], function(z) {
+dois_unpay <- map(oax_works_orcid$doi[1:20], function(z) {
   print(z)
   o <- slow_oadoi_fetch(dois = z, email = my_email)
   return(o)
@@ -91,12 +91,14 @@ dois_unpay_df <- dois_unpay %>%
   clean_names() 
 
 # get a list of DOIs that failed to find an OA version
+  # note: some works in OpenAlex may not have a DOI to begin with
+  # and those works will have an NA populate in dois_not_found
 
 ###########################################################
 ##   When you run this on your own after the class,   #####
 ## remove the [1:20,] and keep the whole oa_works_orcid ###
 ###########################################################
-dois_not_found <- oa_works_orcid[1:20,] %>% 
+dois_not_found <- oax_works_orcid[1:20,] %>% 
   filter(!(doi %in% dois_unpay_df$doi)) %>% 
   pull(doi)
 
@@ -123,30 +125,30 @@ best_oa_merge <- best_oa %>%
   select_if(purrr::negate(is.list))
 
 # now that we have the best OA location, we can merge this back to our ORCID/Crossref file
-oa_works_orcid_unpay <- oa_works_orcid %>%
-  left_join(best_oa_merge, by = "doi", suffix = c("_oa", "_up"))
+oax_works_orcid_unpay <- oax_works_orcid %>%
+  left_join(best_oa_merge, by = "doi", suffix = c("_oax", "_up"))
 
 
 # write the csv
-write_csv(oa_works_orcid_unpay, "./data/results/oa_works_orcid_unpay.csv")  
+write_csv(oax_works_orcid_unpay, "./data/results/oa_works_orcid_unpay.csv")  
 
 
 # exploring the data ------------------------------------------------------
 
 # let's see what info is potentially redundant between Unpaywall and OpenAlex
 # sort the names alphabetically and look for _oa (OpenAlex) and _up (Unpaywall)
-View(as.data.frame(names(oa_works_orcid_unpay)))
+View(as.data.frame(names(oax_works_orcid_unpay)))
 
 # create a subset of only the DOIs tested [1:20]
-# NOTE - you will not need this when you run this yourself
-subset_unpaywall_df <- oa_works_orcid_unpay[1:20,]
+# NOTE - you will not need this when you run this yourself with all the DOIs
+subset_unpaywall_df <- oax_works_orcid_unpay[1:20,]
 
 # is_oa
 # have a look at how many of the results have an open access version available
 # using Unpaywall data
 tabyl(subset_unpaywall_df$is_oa_up)
 # vs OpenAlex data
-tabyl(subset_unpaywall_df$is_oa_oa)
+tabyl(subset_unpaywall_df$is_oa_oax)
 
 #plot number of OA vs non-OA
 # NOTE - you may need to change the limits of your y-axis
@@ -162,7 +164,7 @@ oa_unpaywall <- subset_unpaywall_df %>%
 # vs OpenAlex data
 # (need to reorder TRUE/FALSE so that TRUE is first)
 oa_openalex <- subset_unpaywall_df %>%
-  ggplot(., aes(x = is_oa_oa)) +
+  ggplot(., aes(x = is_oa_oax)) +
   geom_bar(stat = "count",
            color = "black",
            fill = "#CCCACD") +
@@ -178,28 +180,32 @@ oa_unpaywall + oa_openalex
 # using Unpaywall data
 tabyl(subset_unpaywall_df$version_up)
 # vs OpenAlex data, which also includes submittedVersion
-tabyl(subset_unpaywall_df$version_oa)
+tabyl(subset_unpaywall_df$version_oax)
 
 # license
 # using Unpaywall data
 tabyl(subset_unpaywall_df$license_up)
 # vs OpenAlex data
-tabyl(subset_unpaywall_df$license_oa)
+tabyl(subset_unpaywall_df$license_oax)
 
-# plot licenses for OpenAlex and Unpaywall
+# plot licenses for Unpaywall and OpenAlex
 # get a list of licenses
-oa_license_list <- subset_unpaywall_df %>% 
-  select(license_oa) %>% 
-  distinct()
-
+# using Unpaywall data
 up_license_list <- subset_unpaywall_df %>% 
   select(license_up) %>% 
   distinct()
 
-license_list <- oa_license_list %>% 
-  full_join(.,up_license_list, join_by("license_oa" == "license_up")) %>% 
+# vs OpenAlex data
+oax_license_list <- subset_unpaywall_df %>% 
+  select(license_oax) %>% 
+  distinct()
+
+
+# extract a comprehensive list of all licenses
+license_list <- oax_license_list %>% 
+  full_join(.,up_license_list, join_by("license_oax" == "license_up")) %>% 
   distinct() %>% 
-  arrange(license_oa) %>% 
+  arrange(license_oax) %>% 
   pull()
 
 # NOTE - you may need to change the limits of your y-axis
@@ -222,7 +228,7 @@ lic_unpaywall <- subset_unpaywall_df %>%
 lic_openalex <- subset_unpaywall_df %>%
   mutate(license_up = factor(license_up,
                              levels = license_list)) %>% 
-  ggplot(., aes(x = license_oa)) +
+  ggplot(., aes(x = license_oax)) +
   geom_bar(stat = "count",
            color = "black",
            fill = "#CCCACD") +
@@ -240,21 +246,24 @@ lic_unpaywall + lic_openalex
 # using Unpaywall data
 tabyl(subset_unpaywall_df$oa_status_up)
 # vs OpenAlex data
-tabyl(subset_unpaywall_df$oa_status_oa)
+tabyl(subset_unpaywall_df$oa_status_oax)
 
 # get a list of oa statuses
-oa_status_list <- subset_unpaywall_df %>% 
-  select(oa_status_oa) %>% 
-  distinct()
-
+# using Unpaywall data
 up_status_list <- subset_unpaywall_df %>% 
   select(oa_status_up) %>% 
   distinct()
 
-status_list <- oa_status_list %>% 
-  full_join(.,up_status_list, join_by("oa_status_oa" == "oa_status_up")) %>% 
+# vs OpenAlex data
+oax_status_list <- subset_unpaywall_df %>% 
+  select(oa_status_oax) %>% 
+  distinct()
+
+# extract a comprehensive list of all oa statuses
+status_list <- oax_status_list %>% 
+  full_join(.,up_status_list, join_by("oa_status_oax" == "oa_status_up")) %>% 
   distinct() %>% 
-  arrange(oa_status_oa) %>% 
+  arrange(oa_status_oax) %>% 
   pull()
 
 # create color palette
@@ -286,11 +295,11 @@ oa_status_plot_up <- subset_unpaywall_df %>%
   ylim(0,12)
 
 # and OpenAlex
-oa_status_plot_oa <- subset_unpaywall_df %>%
-  mutate(oa_status_oa = factor(oa_status_oa,
+oa_status_plot_oax <- subset_unpaywall_df %>%
+  mutate(oa_status_oax = factor(oa_status_oax,
                                levels = status_list)) %>% 
-  ggplot(., aes(x = oa_status_oa,
-                fill = oa_status_oa)) +
+  ggplot(., aes(x = oa_status_oax,
+                fill = oa_status_oax)) +
   geom_bar(stat = "count", 
            color = "black",
            show.legend = FALSE) +
@@ -303,7 +312,7 @@ oa_status_plot_oa <- subset_unpaywall_df %>%
                                    vjust = 0.5)) +
   ylim(0,12)
 
-oa_status_plot_up + oa_status_plot_oa
+oa_status_plot_up + oa_status_plot_oax
 
 # has_repository_copy (unpaywall-only data)
 tabyl(subset_unpaywall_df$has_repository_copy)
@@ -336,9 +345,9 @@ pub_year_up <- subset_unpaywall_df %>%
   labs(title = "Unpaywall Data")
 
 # OpenAlex data
-pub_year_oa <- subset_unpaywall_df %>% 
+pub_year_oax <- subset_unpaywall_df %>% 
   ggplot(aes(x = publication_year, 
-             fill = is_oa_oa)) +
+             fill = is_oa_oax)) +
   geom_bar(color = "black",
            position = position_stack(reverse = TRUE)) +
   scale_fill_manual(values = c("TRUE" = "#00BFC4",
@@ -348,4 +357,4 @@ pub_year_oa <- subset_unpaywall_df %>%
   theme(legend.position = "bottom") +
   labs(title = "OpenAlex Data")
 
-pub_year_up + pub_year_oa
+pub_year_up + pub_year_oax
