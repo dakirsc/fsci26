@@ -27,30 +27,28 @@ library(patchwork)
 # to start with a clean slate
 rm(list = ls())
 
-# read in the crossref/orcid merge data
-oa_works_author <- read_csv("./data/results/openalex_works_author_collated.csv",
+# read in the openalex/orcid merge data
+oax_works_author <- read_csv("./data/results/openalex_works_author_collated.csv",
                      col_types = cols(.default = "c"))
 
-# paste in your sherpa romeo API key
-# you can obtain this after creating an account,
-# logging in, and clicking the Admin tab at 
-# https://v2.sherpa.ac.uk/cgi/users/home
-sherpa_key <- "ENTER YOUR KEY HERE"
+# paste in your Open Policy Finder API key
+# you can obtain this....
+opf_key <- "ENTER YOUR KEY HERE"
 
-# create safe, slow version of GET 
-safeslowget <- slowly(safely(GET), rate_delay(2))
+# create safe, slow version of request and response 
+safely_perform <- safely(req_perform)
+safely_res <- safely(resp_body_json)
 
 # create a  list with unique issns
-oa_issn_lookup <- oa_works_author %>%
+oax_issn_lookup <- oax_works_author %>%
   filter(!is.na(issn_l),
          !duplicated(issn_l)) 
 
 
 # construct urls to send in API call
-api_url <- paste0("https://v2.sherpa.ac.uk/cgi/retrieve_by_id?item-type=publication&api-key=",
-                  sherpa_key,
-                  "&format=Json&identifier=",
-                  oa_issn_lookup$issn_l)
+  # each ISSN is queried separately 
+opf_api_url <- paste0("https://api.openpolicyfinder.jisc.ac.uk/retrieve_by_id?item-type=publication&format=Json&identifier=",
+                  oax_issn_lookup$issn_l)
 
 ###################################################
 ## When you run this on your own after the class,##
@@ -58,53 +56,60 @@ api_url <- paste0("https://v2.sherpa.ac.uk/cgi/retrieve_by_id?item-type=publicat
 ###################################################
 # We need to limit this because it takes a long time to get this data
 # send the request
-romeo_request <- map(api_url[1:10], function(z) {
-  print(z)
-  o <- safeslowget(z)
-  return(o)
-})
+opf_request <- map(opf_api_url[1:10], ~request(.x))
 
 # parse the results
-romeo_response <- romeo_request %>%
-  map(., pluck, "result") %>% # needed to dig into data (otherwise, also includes 'error' report from safely)
-  map(., content) %>%
-  map(., pluck, "items", 1) 
+opf_send <- map(opf_request, function(z) {
+  print(z)
+  getdata <- req_method(z, "GET") %>%
+    req_headers("x-api-key" = opf_key) %>%
+    safely_perform(.)
+  return(getdata)
+})
+
+opf_respose <- map(opf_send, function(z) {
+  print("request")
+  i <- pluck(z, "result")
+  safely_res(i, check_type = FALSE)
+})
+
+opf_extract <- map(opf_response, pluck, "result", "items", 1)
 
 # view JSON file
 # NOTE: even though number_unnamed() ensures the top level of the list
 # starts at 1 (instead of 0), 
 # subsequent levels of the list start with 0 in this viewing mode
-jsonedit(number_unnamed(romeo_response), mode = "view")
+jsonedit(number_unnamed(opf_extract), mode = "view")
 
 # if we instead view the file through a tab in RStudio, 
 # we can see that subsequent list levels actually start at 1
-View(romeo_response)
+View(opf_extract)
 
 # create a data frame with some pertinent datapoints
 ###################################################
 ## When you run this on your own after the class,##
 ############### REMOVE THE [1:10] #################
-####### after call = api_url[1:10] ################
+####### after call = opf_api_url[1:10] ################
 ###################################################
-romeo_df <- romeo_response %>% {
+opf_df <- opf_extract %>% {
   tibble(issn = map_chr(., pluck, "issns", 1, "issn", .default = NA_character_),
          title = map_chr(., pluck, "title", 1, "title", .default = NA_character_),
          sherpa_id = map_dbl(., pluck, "system_metadata", "id", .default = NA_integer_),
          publisher = map_chr(., pluck, "publishers", 1, "publisher", "name", 1, "name", .default = NA_character_),
          publisher_policy = map(., pluck, "publisher_policy"),
-         call = api_url[1:10]
+         call = opf_api_url[1:10]
   )
 } %>%
   filter(!is.na(sherpa_id))
 
 # view publisher policy column using jsonedit
-jsonedit(number_unnamed(romeo_df$publisher_policy),
+jsonedit(number_unnamed(opf_df$publisher_policy),
          mode = "view")
 
 # create a list with the policies for each call.
 # one ISSN might have multiple policies.
 # discard the empty items, and retrieve the ID
-publisher_policyid <- romeo_df$publisher_policy %>%
+publisher_policyid <- opf_df$publisher_policy %>%
   discard(is_empty) %>%
   map_depth(., 2, pluck, "id", .default = NA_integer_)
 
@@ -116,13 +121,13 @@ policyid_vec <- publisher_policyid %>%
   purrr::flatten() %>%
   as_vector()
 
-issn_vec <- rep(romeo_df$issn[!is.na(romeo_df$sherpa_id)], lengths(publisher_policyid))
+issn_vec <- rep(opf_df$issn[!is.na(opf_df$sherpa_id)], lengths(publisher_policyid))
 
 issn_policy <- tibble(policyid_vec,
                       issn_vec) 
 
 # create a list including just the publisher policies
-pubpolicy <- romeo_df$publisher_policy %>% 
+pubpolicy <- opf_df$publisher_policy %>% 
   map_depth(., 2, pluck, "permitted_oa") %>%
   discard(is_empty) 
 
@@ -199,16 +204,16 @@ license <- map_depth(pubpolicy, 3, "license", .ragged = TRUE, .default = NA_char
   as_vector()
 
 # pull all of these together into a tibble and join it to the linking table so we can then join it to the original file
-romeo_results <- tibble(policyid_names,
-                        article_version,
-                        conditions,
-                        oa_fee,
-                        location,
-                        prerequisites,
-                        embargo_units,
-                        embargo_amount,
-                        embargo,
-                        license) %>%
+opf_results <- tibble(policyid_names,
+                      article_version,
+                      conditions,
+                      oa_fee,
+                      location,
+                      prerequisites,
+                      embargo_units,
+                      embargo_amount,
+                      embargo,
+                      license) %>%
   left_join(issn_policy, by = c("policyid_names" = "policyid_vec"), relationship = "many-to-many")
 
 # join the sherpa data to our crossref/orcid file
@@ -216,11 +221,11 @@ romeo_results <- tibble(policyid_names,
 # are a few distinctions in the policies that we did not
 # pull here, so we filter to keep only those distinct
 # observations between the listed variable names
-orcid_oa_sherpa <- oa_issn_lookup %>%
+orcid_oa_opf <- oa_issn_lookup %>%
   mutate(work_license = license) %>% 
   select(-license) %>% 
-  left_join(.,romeo_results, by = c("issn_l" = "issn_vec")) %>%
+  left_join(.,opf_results, by = c("issn_l" = "issn_vec")) %>%
   distinct(doi, policyid_names, article_version, conditions, oa_fee, 
            location, prerequisites, embargo, license, .keep_all = TRUE)
 
-write_csv(orcid_oa_sherpa, "./data/results/orcid_oa_sherpa.csv")
+write_csv(orcid_oa_opf, "./data/results/orcid_oa_opf.csv")
