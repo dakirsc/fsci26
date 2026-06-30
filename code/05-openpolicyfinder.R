@@ -67,7 +67,7 @@ opf_send <- map(opf_request, function(z) {
   return(getdata)
 })
 
-opf_respose <- map(opf_send, function(z) {
+opf_response <- map(opf_send, function(z) {
   print("request")
   i <- pluck(z, "result")
   safely_res(i, check_type = FALSE)
@@ -203,6 +203,19 @@ license <- map_depth(pubpolicy, 3, "license", .ragged = TRUE, .default = NA_char
   purrr::flatten() %>%
   as_vector()
 
+copyright_owner <- map_depth(pubpolicy, 3, pluck, "copyright_owner", .ragged = TRUE, .default = NA_character_) %>%
+  purrr::flatten() %>%
+  purrr::flatten() %>%
+  as_vector()
+
+publisher_deposit <- map_depth(pubpolicy, 3, pluck, "publisher_deposit", .ragged = TRUE, .default = NA_character_) %>%
+  map_depth(., 4, pluck, "repository_metadata", .ragged = TRUE, .default = NA_character_) %>%
+  map_depth(., 4, pluck, "name", 1, "name", .ragged = TRUE, .default = NA_character_) %>%
+  modify_depth(., 3, paste, collapse = "|") %>%
+  purrr::flatten() %>%
+  purrr::flatten() %>%
+  as_vector()
+
 # pull all of these together into a tibble and join it to the linking table so we can then join it to the original file
 opf_results <- tibble(policyid_names,
                       article_version,
@@ -213,7 +226,9 @@ opf_results <- tibble(policyid_names,
                       embargo_units,
                       embargo_amount,
                       embargo,
-                      license) %>%
+                      license,
+                      copyright_owner,
+                      publisher_deposit) %>%
   left_join(issn_policy, by = c("policyid_names" = "policyid_vec"), relationship = "many-to-many")
 
 # join the sherpa data to our crossref/orcid file
