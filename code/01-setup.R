@@ -125,6 +125,15 @@ usethis::edit_r_environ()
 #You can confirm this by calling orcid_auth(), and it will print the token
 rorcid::orcid_auth()
 
+
+# configure OpenAlex ------------------------------------------------------
+
+# 1. Create an account with OpenAlex at https://openalex.org/
+# 2. Verify your email to gain access to your account.
+# 3. Got to Account Settings >> API Key and copy your API key
+# 4. Run the code below, replacing YOUR_API_KEY with the key you copied
+options(openalexR.apikey = "YOUR_API_KEY")
+
 # configure Open Policy Finder --------------------------------------------------
 
 # 1. Create an account with Open Policy Finder at [insert URL when available]
