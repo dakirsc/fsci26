@@ -236,7 +236,7 @@ opf_results <- tibble(policyid_names,
 # are a few distinctions in the policies that we did not
 # pull here, so we filter to keep only those distinct
 # observations between the listed variable names
-orcid_oa_opf <- oa_issn_lookup %>%
+orcid_oa_opf <- oax_issn_lookup %>%
   mutate(work_license = license) %>% 
   select(-license) %>% 
   left_join(.,opf_results, by = c("issn_l" = "issn_vec")) %>%
