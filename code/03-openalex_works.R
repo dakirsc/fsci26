@@ -1,7 +1,10 @@
 # load required packages
 library(openalexR)
 library(httr2)
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
 library(purrr)
 
 # this code functionally replaces the rorcid_works and rcrossref_metadata code
