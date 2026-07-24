@@ -19,6 +19,19 @@ library(rcrossref)
 library(roadoi)
 library(inops)
 
+# Run this code to set your credentials for the Crossref API:
+usethis::edit_r_environ()
+
+# A new window will open in RStudio.
+# In this separate R environment page, type the following (except the #)
+# crossref_email="name@example.com"
+# replace 'name@example.com' with your email
+
+# press enter to create a new line, and leave it blank. 
+# Press Ctrl + S (Mac: Cmd + S) to save this information to your R environment and close the window. You won't see anything happen here because it is just saving the page.
+# Click Session > Restart R. Your token should now be saved to your R environment. 
+
+# You will need to reload all packages after restarting R
 
 # remove all objects from the environment
 # to start with a clean slate
