@@ -105,17 +105,12 @@ print(orcid_response$access_token)
 usethis::edit_r_environ()
 
 
-
 # A new window will open in RStudio.
 # In this separate R environment page, type the following (except the pound sign):
 # ORCID_TOKEN="my-token"
 # replace 'my-token' with the access_token you just copied. 
 # Then press enter to create a new line.
 
-
-# while we are here, we'll add in our rcrossref credentials
-# type crossref_email="name@example.com", using your own email address.
-# press enter to create a new line, and leave it blank. 
 # Press Ctrl + S (Mac: Cmd + S) to save this information to your R environment and close the window. You won't see anything happen here because it is just saving the page.
 # Click Session > Restart R. Your token should now be saved to your R environment. 
 
@@ -136,12 +131,14 @@ options(openalexR.apikey = "YOUR_API_KEY")
 
 # configure Open Policy Finder --------------------------------------------------
 
-# 1. Create an account with Open Policy Finder at [insert URL when available]
-# 2. Click the Admin button. Your API key will be displayed. We will use this in 06
-# 3. For now, paste it here: 
+# This year, since Open Policy Finder recently released a new version of their API,
+  # you should have received a temporary API key via email
+# If you want to continue using Open Policy Finder after your temporary key expires
+  # you can find more information on requesting an API key on the OPF website
+  # https://openpolicyfinder.jisc.ac.uk/help/developers/how-to-request-a-new-api-key
 
-# to avoid sharing private information in shared code:
-# rstudioapi::askForPassword('Open Policy Finder API Key:')
+# For now, paste your temporary API key here: 
+
 
 
 # find your institution's identifiers -------------------------------------
