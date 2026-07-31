@@ -225,6 +225,29 @@ write_csv(oax_works_author_collated,"data/results/openalex_works_author_collated
 # now let's combine this with the orcid_employment_file.csv
 # so we have a more complete dataset
 
+# first, we read in the orcid_employment_file.csv
+orcid_employ <- read_csv("data/results/orcid_employment_file.csv")
+
+# then we'll filter the OpenAlex author data for institutionally-affiliated authors
+# modify the `orcid` column data to remove the "https://orcid.org/"
+# and join it with the ORCID data 
+# BUT this will only match based on ORCID ID, so some authors will be missed
+
+# replace "YOUR INSTITUTION NAME" with your institution's name
+  # alternatively, you can filter by ROR ID
+  # by instead using filter(ror == "YOUR ROR ID") and pasting in your institution's ROR ID
+oax_authors_orcid_employ_combined <- oax_authors %>% 
+  filter(affil_display_name == "YOUR INSTITUTION NAME") %>% 
+  mutate(orcid = str_replace(orcid, "https://orcid.org/", "")) %>% 
+  left_join(., orcid_employ, by = c("orcid" = "orcid_identifier_path"))
+
+# these combined data may be situationally useful, but odds are ORCID iDs
+# or names alone can get you enough information to get started. With 87 variables,
+# the oax_works_orcid_employ_combined data may be a lot to work with
+
+# but we can go ahead and save it
+write_csv(oax_authors_orcid_employ_combined, "data/results/oax_authors_orcid_employ_combo.csv")
+
 # looking at the data -----------------------------------------------------
 
 # number of unique ORCID iDs found in OpenAlex
