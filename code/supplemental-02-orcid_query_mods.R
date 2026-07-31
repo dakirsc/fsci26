@@ -75,31 +75,3 @@ orcid_query <- glue('ror-org-id:"',
 
 # examine my_query
 orcid_query
-
-
-####################
-# iith.ac.in = 2540 full query; 104 email only
-# *iith.ac.in = 2543; 154 email only
-
-# get the counts
-orcid_count <- base::attr(rorcid::orcid(query = orcid_query),
-                          "found")
-
-# create the page vector
-page_vector <- seq(from = 0, to = orcid_count, by = 200)
-
-# get the ORCID iDs
-orcid_pull <- purrr::map(
-  page_vector,
-  function(page) {
-    print(page)
-    my_orcids <- rorcid::orcid(query = orcid_query,
-                               rows = 200,
-                               start = page)
-    return(my_orcids)
-  })
-
-# put the ORCID iDs into a single tibble
-orcid_data <- orcid_pull %>%
-  map_dfr(., as_tibble) %>%
-  janitor::clean_names()
