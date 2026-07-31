@@ -23,7 +23,6 @@ library(anytime)
 library(janitor)
 library(glue)
 library(rorcid)
-library(rcrossref)
 library(roadoi)
 library(inops)
 library(listviewer) # required for jsonedit
@@ -32,14 +31,12 @@ library(listviewer) # required for jsonedit
 
 email_domain <- "enter your institution's email domain" 
 organization_name <- "enter your organization's name"
-# grid_id <- "enter your institution's grid ID" (now retired)
 ror_id <- "enter your institution's ROR ID"
 
 
 # example
 # email_domain <- "@okstate.edu"
 # organization_name <- "Oklahoma State University"
-# grid_id <- "grid.65519.3e"
 # ror_id <- "https://ror.org/01g9vbr38"
 
 
@@ -50,10 +47,6 @@ orcid_query <- glue('ror-org-id:"',
                  email_domain, 
                  ' OR affiliation-org-name:"', 
                  organization_name, '"')
-
-# here is the query you would use if you wanted to use your
-# institution's Ringgold and GRID IDs too.
-# my_query <- glue('ringgold-org-id:', ringgold_id, ' OR grid-org-id:', grid_id, ' OR ror-org-id:"', ror_id, '" OR email:*', email_domain, ' OR affiliation-org-name:"', organization_name, '"')
 
 # examine my_query
 orcid_query
@@ -274,26 +267,26 @@ print(dept_plot)
 # to describe themselves
 # depending on what your interest is
 
-# make a list of titles for graduate students
-grad_student_titles <- c("Graduate Research Assistant",
-                         "GRA","Graduate Student ",
-                         "Graduate Assistant",
-                         "Graduate Teaching Assistant",
-                         "Graduate Research Associate",
-                         "Graduate Research and Teaching Assistant",
-                         "Graduate Student and Research Assistant",
-                         "Master's Student",
-                         "PhD Student",
-                         "PhD Student ", # some entries have trailing white space
-                         "Graduate Researcher/Teaching Assistant")
-
 # rename values in role_title if they exist in the grad_student_titles
 # this helps standardize related terms
 roles <- orcid_person_employment_join %>%
-  mutate(role_title = ifelse(role_title %in% grad_student_titles,
-                             "Graduate Student",role_title),
-         role_title = tolower(role_title),
+  mutate(role_title = tolower(role_title),
+         role_title = str_trim(role_title),
          role_title = str_remove_all(role_title, "[[:punct:]]"))
+
+unique(roles$role_title)
+# make a list of titles for graduate students
+grad_student_titles <- c("graduate research associate",
+                         "graduate students",
+                         "graduate student",
+                         "phd student",
+                         "graduate teaching assistant",
+                         "graduate research assistant",
+                         "phd")
+
+roles <- roles %>%
+  mutate(role_title = ifelse(role_title %in% grad_student_titles,
+                             "graduate student",role_title))
 
 role_tally <- roles %>% 
   group_by(role_title) %>% 
