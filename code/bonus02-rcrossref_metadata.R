@@ -1,3 +1,6 @@
+# install the rcrossref package
+remotes::install_github("ropensci/rcrossref")
+
 # load the required packages
 library(dplyr)
 library(tibble)
