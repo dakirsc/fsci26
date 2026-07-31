@@ -19,7 +19,6 @@ install.packages('anytime')
 install.packages('janitor')
 install.packages('glue')
 install.packages('remotes')
-remotes::install_github("ropensci/rcrossref")
 install.packages('roadoi')
 install.packages('inops')
 install.packages("png")
@@ -46,7 +45,6 @@ library(anytime)
 library(janitor)
 library(glue)
 library(rorcid)
-library(rcrossref)
 library(roadoi)
 library(inops)
 library(png)
@@ -74,12 +72,7 @@ orcid_client_id <- "PASTE MY CLIENT ID HERE"
 # copy/paste your client secret from https://orcid.org/developer-tools
 orcid_client_secret <- "PASTE MY CLIENT SECRET HERE"
 
-# Alternatively, to ensure private information remains private
-# (especially when sharing code with others)
-# install.packages("rstudioapi")
-# library(rstudioapi)
-# rstudioapi::askForPassword('ORCID Client Secret:')
-
+# create and send request to get ORCID API access token
 orcid_request <- POST(url  = "https://orcid.org/oauth/token",
                       config = add_headers(`Accept` = "application/json",
                                            `Content-Type` = "application/x-www-form-urlencoded"),
@@ -114,10 +107,11 @@ usethis::edit_r_environ()
 # Press Ctrl + S (Mac: Cmd + S) to save this information to your R environment and close the window. You won't see anything happen here because it is just saving the page.
 # Click Session > Restart R. Your token should now be saved to your R environment. 
 
-# You will need to reload all packages after restarting R
+# You will need to reload all packages after restarting R (lines 32-56)
 
 
-#You can confirm this by calling orcid_auth(), and it will print the token
+# You can confirm your access token was saved by calling orcid_auth(), 
+# and it will print the token
 rorcid::orcid_auth()
 
 
