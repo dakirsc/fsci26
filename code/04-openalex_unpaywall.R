@@ -15,7 +15,6 @@ library(anytime)
 library(janitor)
 library(glue)
 library(rorcid)
-library(rcrossref)
 library(roadoi)
 library(inops)
 library(openalexR)
@@ -101,6 +100,7 @@ dois_unpay_df <- dois_unpay %>%
 dois_not_found <- oax_works_orcid[1:20,] %>% 
   filter(!(doi %in% dois_unpay_df$doi)) %>% 
   pull(doi)
+# NOTE: some works may be missing DOIs entirely, so if you see NA in your list, that's probably why
 
 # View the data
 View(dois_unpay_df)
@@ -124,9 +124,17 @@ best_oa_merge <- best_oa %>%
   filter(!duplicated(doi)) %>%
   select_if(purrr::negate(is.list))
 
+# separately filter for closed access
+closed_only <- dois_unpay_df %>% 
+  filter(is_oa == FALSE)%>%
+  select_if(purrr::negate(is.list))
+
+# and merge this with the best_oa_merge data
+unpay_merge <- bind_rows(best_oa_merge, closed_only)
+
 # now that we have the best OA location, we can merge this back to our ORCID/Crossref file
 oax_works_orcid_unpay <- oax_works_orcid %>%
-  left_join(best_oa_merge, by = "doi", suffix = c("_oax", "_up"))
+  left_join(unpay_merge, by = "doi", suffix = c("_oax", "_up"))
 
 
 # write the csv
@@ -271,7 +279,8 @@ oa_colors <- c("bronze" = "#D55E00",
                "closed" = "#000000",
                "gold" = "#F0E442",
                "green" = "#009E73", 
-               "hybrid" = "#E69F00")
+               "hybrid" = "#E69F00",
+               "diamond" = "#00CCFF")
 
 # my_colors <- oa_colors[names(oa_colors) %in% subset_unpaywall_df$oa_status]
 
