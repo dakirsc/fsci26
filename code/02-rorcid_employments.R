@@ -29,6 +29,9 @@ library(listviewer) # required for jsonedit
 
 # build the query  --------------------------------------------------------
 
+# if you need multiple email domains, multiple ROR IDs, or domain prefixes,
+# open the script supplemental-02-orcid_query_mod.R
+
 email_domain <- "enter your institution's email domain" 
 organization_name <- "enter your organization's name"
 ror_id <- "enter your institution's ROR ID"
