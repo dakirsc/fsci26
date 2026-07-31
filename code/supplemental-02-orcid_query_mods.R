@@ -2,7 +2,7 @@
 # for example, wanting to search multiple email domains or ROR IDs
 # we also include an example to account for distinct prefixes in an email domain
 
-# each example provided here replaces lines 32-52 in 02-rorcid_employments.R
+# each example provided here replaces lines 35-55 in 02-rorcid_employments.R
 
 
 # Multiple Email Domains --------------------------------------------------
